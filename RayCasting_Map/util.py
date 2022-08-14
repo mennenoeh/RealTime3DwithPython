@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class CI_COLORS(Enum):
     GREY_DARK   = (112, 111, 111)
     RED         = (205,  23,  25)
@@ -12,4 +13,3 @@ class CI_COLORS(Enum):
     GREY_LIGHT  = (218, 218, 218)
     BLUE        = (  0,   0, 255)
 
-pass
