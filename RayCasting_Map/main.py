@@ -15,21 +15,28 @@ from wayfinding import get_path
 
 pygame.init()
 
-map_size = m_width, m_height = 50, 30
-grid_size = 25
+MAP_SIZE = width_cells, height_cells = 50, 30
+CELL_SIZE_PX = 30
+STATUS_BAR_HEIGHT_PX = 50
 
-size = width, height = m_width * grid_size, m_height * grid_size # Auflösen
+draw_area_size_px = width_px, height_px = width_cells * CELL_SIZE_PX, height_cells * CELL_SIZE_PX
+window_size_px = width_px, height_px + STATUS_BAR_HEIGHT_PX
+status_bar_size_px = width_px, STATUS_BAR_HEIGHT_PX
 
-# screen = pygame.display.set_mode(size)
-# print(screen.get_size())
+draw_area = pygame.surface.Surface(draw_area_size_px)
+status_bar = pygame.surface.Surface(status_bar_size_px)
+window = pygame.display.set_mode(window_size_px)
+
+
+print(window.get_size())
 
 agent_smith = Agent()
-agent_smith.set_pos(np.array((float(randint(0,width)), float(randint(0,height))))) # hier nich set path
+agent_smith.set_pos(np.array((float(randint(0,width_px)), float(randint(0,height_px))))) # hier nich set path
 
 
 neo = Agent()
 
-map = Map(map_size, grid_size)
+map = Map(MAP_SIZE)
 
 start_pos = Spot(1, 25, 1, map)
 end_pos   = Spot(1, 5, 1, map)
@@ -68,7 +75,7 @@ while 1:
                 print(len(walk))
                 agent_smith.set_block_path(walk)
         
-
+    window.blit(draw_area, (0, STATUS_BAR_HEIGHT_PX))
     map.screen.fill(CI_COLORS.WHITE.value)
     agent_smith.follow_path()
     # neo.seek(agent_smith.pos)
@@ -86,4 +93,4 @@ while 1:
 
     agent_smith.draw(screen=map.screen)
     # neo.draw(screen=map.screen)
-    pygame.display.flip()
+    pygame.display.update()
