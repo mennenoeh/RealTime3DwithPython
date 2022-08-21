@@ -1,5 +1,4 @@
 from enum import Enum
-import numpy as np
 
 class CI_COLORS(Enum):
     GREY_DARK   = (112, 111, 111)
@@ -12,7 +11,5 @@ class CI_COLORS(Enum):
     BLACK       = (  0,   0,   0)
     GREY_LIGHT  = (218, 218, 218)
     BLUE        = (  0,   0, 255)
-
-def one_if_negative(value: int) -> int:
-    if value < 0: return 1
+    BLUE_alpha  = (  0,   0, 255, 0.5)
 

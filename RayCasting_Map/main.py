@@ -50,12 +50,18 @@ agent_smith = Agent(map=map)
 agent_smith.set_pos(np.array((float(randint(0,width_px)), float(randint(0,height_px))))) # hier nich set path
 
 # walk = get_path(map, choice(map.get_cells_from_type("start")), choice(map.get_cells_from_type("end")))
-walk = get_path(map, start_pos, end_pos)
+# walk = get_path(map, start_pos, end_pos)
 
-agent_smith.set_path(path=walk)
+# agent_smith.set_path(agent_smith.calculate_cell_path(start_pos, end_pos))
 
+choice(map.get_cells_from_type("start")), choice(map.get_cells_from_type("end"))
 
+agents = [Agent(map=map) for _ in range(100)]
+for agent in agents:
+    agent.set_path(agent_smith.calculate_cell_path(choice(map.get_cells_from_type("start")), choice(map.get_cells_from_type("end"))))
 
+# agents = [agent.set_path(agent.calculate_cell_path(choice(map.get_cells_from_type("start")), choice(map.get_cells_from_type("end")))) for agent in agents]
+print(len(agents))
 
 mode : str = ""
 
@@ -85,15 +91,15 @@ while 1:
                 map.set_cell_from_mouse(cell_type="blocked")
             elif mode == "s":
                 map.set_cell_from_mouse(cell_type="start")
-                # print("start", map.get_cells_from_type(cell_type="start"))
             elif mode == "e":
                 map.set_cell_from_mouse(cell_type="end")
-                # print("end", map.get_cells_from_type(cell_type="end"))
-            walk = get_path(map, start_pos, end_pos)
-            agent_smith.set_path(walk)
+            for agent in agents:
+                 agent.set_path(agent_smith.calculate_cell_path(choice(map.get_cells_from_type("start")), choice(map.get_cells_from_type("end"))))
+
         if pygame.mouse.get_pressed()[2] == 1:
             map.set_cell_from_mouse(cell_type="free")
-            print(len(walk))
+            for agent in agents:
+                 agent.set_path(agent_smith.calculate_cell_path(choice(map.get_cells_from_type("start")), choice(map.get_cells_from_type("end"))))
         
     
     window.blit(draw_area, (0, STATUS_BAR_HEIGHT_PX))
@@ -115,7 +121,10 @@ while 1:
     # start_pos.draw(CI_COLORS.GREEN)
     # end_pos.draw(CI_COLORS.RED)
 
-    agent_smith.draw(screen=draw_area)
+    # agent_smith.draw(screen=draw_area)
+
+    for agent in agents:
+        agent.draw(screen=draw_area)
     
     # neo.draw(screen=draw_area)
     pygame.display.update()

@@ -3,43 +3,11 @@ from tarfile import PAX_FIELDS
 import pygame
 import numpy as np
 import numpy.linalg as la
-from util import CI_COLORS, one_if_negative
+from util import CI_COLORS
 import random
-# from wayfinding import get_path
+from tcod import path
 
 
-
-
-# class Spot:
-#     def __init__(self, x: np.int8, y: np.int8, blocked: np.int8, map) -> None:
-#         self.x = x
-#         self.y = y
-#         self.blocked = blocked
-#         self.map = map
-#         self.left = x * 30 + 1
-#         self.top = y * 30 + 1
-#         self.right = self.left + 30 - 1
-#         self.bottom = self.top + 30 - 1
-#         self.r = pygame.Rect(self.left, self.top, map.grid_size-1, map.grid_size-1)
-
-#     def draw(self, color:CI_COLORS):
-#         pygame.draw.rect(self.map.screen, color=color.value, rect=self.r)
-    
-#     def get_block(self):
-#         return self.x, self.y
-    
-#     def get_center_pos(self):
-#         return self.left + (self.map.grid_size // 2), self.top + (self.map.grid_size // 2)
-    
-#     def get_random_pos(self):
-#         return random.uniform(self.left, self.right), random.uniform(self.top, self.bottom)
-    
-#     def is_within(self, pos) -> bool:
-#         x, y = pos
-#         if x > self.left and x < self.right and y > self.top and y < self.bottom:
-#             return Trues
-#         else:
-#             return False
 
 class Map:
     def __init__(self, shape: tuple[int, int], cell_size: int, statusbar_height: int) -> None: #TODO: Hier Screen ergänzen konstruktor und gridsize 
@@ -48,7 +16,6 @@ class Map:
         self.cell_size = cell_size
         self.cells = np.loadtxt("store.csv", delimiter=",").astype("int").T
         self.rects = np.empty(self.max_x*self.max_y, dtype=pygame.Rect).reshape(shape)
-        self.one_if_negative_vec =  np.vectorize(one_if_negative)
         
         # init rects
         for x in range(self.max_x):
@@ -150,7 +117,7 @@ class Agent:
         pygame.draw.line(screen, CI_COLORS.GREEN.value, self.pos, self.pos + (self.vel * 10), width=3 )
         #pygame.draw.circle(screen, CI_COLORS.RED_DARK.value, self.pos, 1)
         if len(self.px_path) > 2:
-            pygame.draw.lines(screen, CI_COLORS.BLUE.value, closed=False, points=self.px_path)
+            pygame.draw.lines(screen, CI_COLORS.BLUE_alpha.value, points=self.px_path, closed=False, width=1)
 
     def set_pos(self, pos: tuple[float]) -> None:
         self.pos = pos
@@ -169,9 +136,24 @@ class Agent:
         self.acc[0], self.acc[1] = 0.0, 0.0
         # hier raycasting
     
+    def calculate_cell_path(self, start_pos: tuple[int, int], end_pos: tuple[int, int]) -> list[tuple[int, int]]: # Abhängigkeit von map auflösen
+        EUCLIDEAN = [  # Approximate euclidean distance.
+            [99, 70, 99],
+            [70, 0, 70],
+            [99, 70, 99],
+        ]
+        graph = path.CustomGraph(self.map.cells.shape)
+        graph.add_edges(edge_map=EUCLIDEAN, cost=self.map.get_blocked_cells())
+        graph.set_heuristic(cardinal=70, diagonal=99)
+        pf = path.Pathfinder(graph)
+        pf.add_root(start_pos)
+        return pf.path_to(end_pos).tolist()
+
+        print(pf.distance)
+    
     def set_path(self, path):
         self.cell_path = path.copy()
-        self.px_path = [self.map.rects[x, y].center for x, y in self.cell_path]
+        self.px_path = [(self.map.rects[x, y].left + random.randint(0, self.map.cell_size), self.map.rects[x, y].top + random.randint(0, self.map.cell_size)) for x, y in self.cell_path]
         print(self.cell_path)
         print(self.px_path)
     
