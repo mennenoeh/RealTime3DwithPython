@@ -102,7 +102,7 @@ class Map:
 class Agent:
     def __init__(self, map: Map) -> None:
         self.pos = np.array((1.0, 1.0))
-        self.color = CI_COLORS.BLUE.value
+        self.color = CI_COLORS.BLUE_alpha.value
         self.radius = 10
         self.vel = np.array((1.0, 1.0))
         self.acc = np.array((0.0, 0.0))
@@ -111,17 +111,94 @@ class Agent:
         self.cell_path = []
         self.px_path = []
         self.map = map
+        self.shopping_list = []
+        self.shopping_path = []
+        self.EUCLIDEAN = [  # Approximate euclidean distance.
+            [99, 70, 99],
+            [70, 0, 70],
+            [99, 70, 99],
+        ]
+        
+        self.reset_graph()
+
+    def reset_graph(self) -> None:
+        self.graph = path.CustomGraph(self.map.cells.shape) # --> Wiederverwendung in weitere methode auslösen
+        self.graph.add_edges(edge_map=self.EUCLIDEAN, cost=self.map.get_blocked_cells())
+        self.graph.set_heuristic(cardinal=70, diagonal=99)
 
     def draw(self, screen) -> None:
-        pygame.draw.circle(screen, self.color, self.pos, self.radius)
-        pygame.draw.line(screen, CI_COLORS.GREEN.value, self.pos, self.pos + (self.vel * 10), width=3 )
-        #pygame.draw.circle(screen, CI_COLORS.RED_DARK.value, self.pos, 1)
+        # pygame.draw.circle(screen, self.color, self.pos, self.radius)
+        # pygame.draw.line(screen, CI_COLORS.GREEN.value, self.pos, self.pos + (self.vel * 10), width=3 )
+        # pygame.draw.circle(screen, CI_COLORS.RED_DARK.value, self.pos, 1)
         if len(self.px_path) > 2:
-            pygame.draw.lines(screen, CI_COLORS.BLUE_alpha.value, points=self.px_path, closed=False, width=1)
+            pygame.draw.lines(screen, color=CI_COLORS.BLUE_alpha.value, points=self.px_path, closed=False, width=1)
+        # for 
+        
+    def calculate_random_shopping_trip(self, basket_size: int = 20, mode: str = "greedy") -> None:
+        self.reset_graph()
+        self.shopping_list = []
+        self.shopping_path = []
+        items = []
+        s = random.choices(self.map.get_cells_from_type("start"), k=1)
+        items = random.choices(self.map.get_cells_from_type("free") , k=basket_size)
+        e = random.choices(self.map.get_cells_from_type("end")  , k=1)
+        
+        if mode == "chaotic":
+            self.shopping_list = s + items + e
+            for i in range(len(self.shopping_list) - 1):
+                current_item = self.shopping_list[i]
+                next_item = self.shopping_list[i+1]
+                self.shopping_path.extend(self.calculate_cell_path(current_item, next_item))
+        
+        elif mode == "greedy":
+            
+            # vom start zum nächsten item der Shopping List
+            pf = path.Pathfinder(self.graph)
+            for root in items:
+                pf.add_root(root)
+            path_to_nearest_root = pf.path_from(s[0]).tolist()
+            self.shopping_path.extend(path_to_nearest_root)
 
-    def set_pos(self, pos: tuple[float]) -> None:
-        self.pos = pos
+            # von item zum jeweils nächsten item
+            while len(items) > 0 :
+                next_item = tuple(self.shopping_path[-1])
+                # print("next item", next_item)
+                del pf
+                pf = path.Pathfinder(self.graph)
+                items.remove(next_item)
+                for root in items:
+                    pf.add_root(root)
+                path_to_nearest_root = pf.path_from(next_item).tolist()
+                self.shopping_path.extend(path_to_nearest_root)
+                # print("path to nearest root", path_to_nearest_root)
+            
+            # vom letzten item zum ende
+            del pf
+            pf = path.Pathfinder(self.graph)
+            pf.add_root(e[0])
+            path_to_end = pf.path_from(tuple(self.shopping_path[-1])).tolist()
+            self.shopping_path.extend(path_to_end)
+            # print("path to nearest end", path_to_end)
+        
     
+    def calculate_cell_path(self, start_pos: tuple[int, int], end_pos: tuple[int, int]) -> list[tuple[int, int]]: # Abhängigkeit von map auflösen
+        pf = path.Pathfinder(self.graph)
+        pf.add_root(end_pos)
+        path_list = pf.path_from(start_pos).tolist()
+        del pf
+        return path_list
+
+    def set_path(self, shopping_path):
+        self.cell_path = shopping_path.copy()
+        self.px_path = [(self.map.rects[x, y].left + random.randint(0, self.map.cell_size), self.map.rects[x, y].top + random.randint(0, self.map.cell_size)) for x, y in self.cell_path]
+        # print(self.cell_path)
+        # print(self.px_path)
+    
+    def follow_path(self):
+        if self.cell_path[0].is_within(self.pos) and len(self.cell_path) >= 2:
+            self.cell_path.pop(0)
+            self.px_path.pop(0)
+        self.seek(self.px_path[0])
     def seek(self, target_pos: np.array) -> None:
         self.acc = (target_pos - self.pos) - self.vel
         self.update()
@@ -136,29 +213,5 @@ class Agent:
         self.acc[0], self.acc[1] = 0.0, 0.0
         # hier raycasting
     
-    def calculate_cell_path(self, start_pos: tuple[int, int], end_pos: tuple[int, int]) -> list[tuple[int, int]]: # Abhängigkeit von map auflösen
-        EUCLIDEAN = [  # Approximate euclidean distance.
-            [99, 70, 99],
-            [70, 0, 70],
-            [99, 70, 99],
-        ]
-        graph = path.CustomGraph(self.map.cells.shape)
-        graph.add_edges(edge_map=EUCLIDEAN, cost=self.map.get_blocked_cells())
-        graph.set_heuristic(cardinal=70, diagonal=99)
-        pf = path.Pathfinder(graph)
-        pf.add_root(start_pos)
-        return pf.path_to(end_pos).tolist()
-
-        print(pf.distance)
-    
-    def set_path(self, path):
-        self.cell_path = path.copy()
-        self.px_path = [(self.map.rects[x, y].left + random.randint(0, self.map.cell_size), self.map.rects[x, y].top + random.randint(0, self.map.cell_size)) for x, y in self.cell_path]
-        print(self.cell_path)
-        print(self.px_path)
-    
-    def follow_path(self):
-        if self.cell_path[0].is_within(self.pos) and len(self.cell_path) >= 2:
-            self.cell_path.pop(0)
-            self.px_path.pop(0)
-        self.seek(self.px_path[0])
+    def set_pos(self, pos: tuple[float]) -> None:
+        self.pos = pos
